@@ -4,43 +4,51 @@ import datetime
 
 base_url = 'https://fullfact.org'
 
-today = datetime.date.today() + datetime.timedelta(days=-2)
+today = datetime.date.today() + datetime.timedelta(days=-12)
 print(today)
-
-# today = datetime.datetime.strptime('2016-12-21','%Y-%m-%d').date() # test date
 
 def soup_data(url):
     return BeautifulSoup(request.urlopen(url), 'html.parser')
 
-def soup_dict(soup):
-    quote = []
-    author = ''
-    date = ''
-    link = ''
-    list = soup.children
-    for i in list:
-        if i.find('a') != -1 and i.find('a'):
-            author, date = i.text.rsplit(', ',1)
-            link = i.find('a')
-            link = link['href']
-        elif i.find('p') != -1:
-            quote.append(i.text)
-
-    dict = {'quote': ' '.join(quote), 'author': author.replace('\xa0', ''), 'link': link, 'quote_date': date}
-    return dict
-
 def get_quotes(url):
+    dicts = []
+
+    def soup_dict(soup):
+        quote = []
+        author = ''
+        date = ''
+        link = ''
+        list = soup.children
+        for i in list:
+            if i.find('a') != -1 and i.find('a'):
+                author, date = i.text.rsplit(', ', 1)
+                link = i.find('a')
+                link = link['href']
+            elif i.find('p') != -1:
+                quote.append(i.text)
+
+        dict = {'quote': ' '.join(quote).replace('\xa0',''), 'author': author.replace('\xa0', ''), 'link': link, 'quote_date': date}
+        return dict
+
     soup = soup_data(url)
     soup = soup.find_all('blockquote')
     if len(soup) == 1:
-        dict = soup_dict(soup[0])
-        print(dict)
+        dicts.append(soup_dict(soup[0]))
     elif len(soup) > 1:
         for element in soup:
-            dict = soup_dict(element)
-            print(dict)
+            dicts.append(soup_dict(element))
     else:
         print('No quotes returned')
+
+    return dicts
+
+def get_claim(url):
+    claims = []
+    soup = soup_data(url)
+    soup = soup.find_all('div', {'class': 'col-xs-12 col-sm-6 col-left'})
+    [claims.append(i.find('p').string) for i in soup]
+
+    return claims
 
 if __name__ == '__main__':
     soup = soup_data(base_url)
@@ -52,4 +60,8 @@ if __name__ == '__main__':
             url = article.find('a')
             url = parse.urljoin(base_url, url['href'])
             print(url)
-            get_quotes(url)
+            claims = get_claim(url)
+            [print(claim) for claim in claims]
+            dicts = get_quotes(url)
+            [print(dict) for dict in dicts]
+            print()
